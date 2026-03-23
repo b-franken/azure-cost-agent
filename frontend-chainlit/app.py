@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 import os
+from datetime import UTC, datetime
 
 import chainlit as cl
 
 from src.workflow import create_workflow
-
-logger = logging.getLogger("azure-cost-agent.ui")
 
 
 def _setup_tracing() -> None:
@@ -36,6 +34,21 @@ def _setup_tracing() -> None:
 _tracing_initialized = False
 
 
+def _looks_like_csv(text: str) -> bool:
+    lines = text.strip().splitlines()
+    if len(lines) < 2:
+        return False
+    first_commas = lines[0].count(",")
+    return first_commas >= 2 and all(
+        line.count(",") == first_commas for line in lines[:3]
+    )
+
+
+def _csv_filename() -> str:
+    ts = datetime.now(tz=UTC).strftime("%Y%m%d-%H%M")
+    return f"azure-cost-report-{ts}.csv"
+
+
 @cl.on_chat_start
 async def start() -> None:
     global _tracing_initialized
@@ -57,13 +70,29 @@ async def on_message(message: cl.Message) -> None:
     workflow = builder.build()
     agent = workflow.as_agent(name="azure-cost-agent")
 
+    full_text = ""
     msg = cl.Message(content="")
 
     try:
         async for update in agent.run(message.content, stream=True):
             if update.text:
+                full_text += update.text
                 await msg.stream_token(update.text)
         await msg.update()
+
+        if _looks_like_csv(full_text):
+            file = cl.File(
+                name=_csv_filename(),
+                content=full_text.encode("utf-8"),
+                mime="text/csv",
+            )
+            await cl.Message(
+                content="Download:",
+                elements=[file],
+            ).send()
+
     except Exception as exc:
         print(f"AGENT ERROR: {exc}")
-        await cl.Message(content="Something went wrong. Please try again.").send()
+        await cl.Message(
+            content="Something went wrong. Please try again.",
+        ).send()

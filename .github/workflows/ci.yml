@@ -39,3 +39,9 @@ jobs:
 
       - name: Build Docker image
         run: docker build --platform linux/amd64 -t azure-cost-agent:ci .
+
+      - name: Validate Terraform
+        uses: hashicorp/setup-terraform@v3
+      - run: |
+          cd infra/foundation && terraform init -backend=false && terraform validate
+          cd ../../infra/container-app && terraform init -backend=false && terraform validate

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -245,3 +247,117 @@ def top_spenders(
     total = sum(float(r[0]) for r in rows)
     lines.append(f"\nTotal subscription spend: {total:.2f}")
     return "\n".join(lines)
+
+
+def _build_period_queries(
+    days: int,
+    group_by: str,
+) -> tuple[QueryDefinition, QueryDefinition]:
+    now = datetime.now(tz=UTC)
+    current_start = now - timedelta(days=days)
+    previous_start = current_start - timedelta(days=days)
+
+    dataset = QueryDataset(
+        granularity="None",
+        aggregation={
+            "totalCost": QueryAggregation(name="PreTaxCost", function="Sum"),
+        },
+        grouping=[QueryGrouping(type="Dimension", name=group_by)],
+    )
+
+    current = QueryDefinition(
+        type="ActualCost",
+        timeframe="Custom",
+        time_period=QueryTimePeriod(from_property=current_start, to=now),
+        dataset=dataset,
+    )
+    previous = QueryDefinition(
+        type="ActualCost",
+        timeframe="Custom",
+        time_period=QueryTimePeriod(from_property=previous_start, to=current_start),
+        dataset=dataset,
+    )
+    return previous, current
+
+
+def _rows_to_dict(rows: list[list[Any]]) -> dict[str, float]:
+    result: dict[str, float] = {}
+    for row in rows:
+        cost, key = float(row[0]), str(row[1])
+        result[key] = result.get(key, 0.0) + cost
+    return result
+
+
+@tool
+def export_cost_diff(
+    days: Annotated[
+        int,
+        Field(description="Period length in days to compare"),
+    ] = 30,
+    group_by: Annotated[
+        str,
+        Field(
+            description=("Group by: ResourceGroupName, SubscriptionId, or ServiceName"),
+        ),
+    ] = "ResourceGroupName",
+    ctx: FunctionInvocationContext | None = None,
+) -> str:
+    """Export a CSV cost comparison between current and previous period."""
+    clients = get_clients(ctx)
+
+    previous_query, current_query = _build_period_queries(days, group_by)
+    previous_data = _rows_to_dict(_query_all_scopes(clients, previous_query))
+    current_data = _rows_to_dict(_query_all_scopes(clients, current_query))
+
+    all_keys = sorted(set(previous_data) | set(current_data))
+    if not all_keys:
+        return "No cost data available for the selected period."
+
+    label = group_by.replace("Name", "").replace("Id", "")
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            label,
+            f"Previous {days}d",
+            f"Current {days}d",
+            "Difference",
+            "Change %",
+        ]
+    )
+
+    prev_total = 0.0
+    curr_total = 0.0
+
+    for key in all_keys:
+        prev = previous_data.get(key, 0.0)
+        curr = current_data.get(key, 0.0)
+        diff = curr - prev
+        pct = (diff / prev * 100) if prev > 0 else 0.0
+
+        display_key = key.split("/")[-1] if "/" in key else key
+        writer.writerow(
+            [
+                display_key,
+                f"{prev:.2f}",
+                f"{curr:.2f}",
+                f"{diff:+.2f}",
+                f"{pct:+.1f}%",
+            ]
+        )
+        prev_total += prev
+        curr_total += curr
+
+    total_diff = curr_total - prev_total
+    total_pct = (total_diff / prev_total * 100) if prev_total > 0 else 0.0
+    writer.writerow(
+        [
+            "TOTAL",
+            f"{prev_total:.2f}",
+            f"{curr_total:.2f}",
+            f"{total_diff:+.2f}",
+            f"{total_pct:+.1f}%",
+        ]
+    )
+
+    return output.getvalue()

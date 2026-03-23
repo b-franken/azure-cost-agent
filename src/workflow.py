@@ -51,6 +51,7 @@ AGENTS_CONFIG = [
             cost_analyzer.query_costs,
             cost_analyzer.compare_periods,
             cost_analyzer.top_spenders,
+            cost_analyzer.export_cost_diff,
         ],
     },
     {
