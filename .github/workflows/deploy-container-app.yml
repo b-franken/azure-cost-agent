@@ -2,13 +2,6 @@ name: Deploy to Container App
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "Dockerfile"
-      - "pyproject.toml"
-      - "uv.lock"
 
 permissions:
   id-token: write
@@ -34,7 +27,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - run: uv sync
+      - run: uv sync --frozen --all-extras
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest tests/ --no-header -q
