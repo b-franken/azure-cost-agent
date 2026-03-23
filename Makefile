@@ -1,4 +1,4 @@
-.PHONY: setup run chat devui frontend mcp serve test lint format typecheck check docker-build docker-run
+.PHONY: setup run chat devui frontend mcp a2a serve test lint format typecheck check docker-build docker-run
 
 setup:
 	pip install uv
@@ -21,6 +21,9 @@ devui:
 
 mcp:
 	uv run python -m src.mcp
+
+a2a:
+	uv run python -m src.a2a_server
 
 serve:
 	FOUNDRY_HOSTED=true uv run python -m src.main

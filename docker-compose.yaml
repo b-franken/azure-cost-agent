@@ -1,0 +1,17 @@
+services:
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    ports:
+      - "18888:18888"
+      - "4317:18889"
+
+  agent:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      ENABLE_INSTRUMENTATION: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
+    depends_on:
+      - aspire-dashboard
