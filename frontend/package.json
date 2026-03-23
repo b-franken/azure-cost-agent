@@ -18,6 +18,10 @@
   "devDependencies": {
     "@types/node": "^25",
     "@types/react": "^19",
-    "typescript": "^6"
+    "typescript": "^5"
+  },
+  "overrides": {
+    "prismjs": ">=1.30.0",
+    "langsmith": ">=0.4.6"
   }
 }
