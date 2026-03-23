@@ -49,9 +49,7 @@ class _CostAgentWorkflow(AgentFrameworkWorkflow):
        while tool calls are still active".
     """
 
-    async def run(
-        self, input_data: dict[str, Any]
-    ) -> AsyncGenerator[BaseEvent]:
+    async def run(self, input_data: dict[str, Any]) -> AsyncGenerator[BaseEvent]:
         thread_id = self._thread_id_from_input(input_data)
         workflow = self._resolve_workflow(thread_id)
 
@@ -60,9 +58,7 @@ class _CostAgentWorkflow(AgentFrameworkWorkflow):
             messages = input_data.get("messages") or []
             input_data = {
                 **input_data,
-                "messages": [
-                    m for m in messages if m.get("role") != "tool"
-                ],
+                "messages": [m for m in messages if m.get("role") != "tool"],
             }
 
         async for event in run_workflow_stream(input_data, workflow):

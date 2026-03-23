@@ -75,9 +75,7 @@ async def _run() -> None:
                 req.request_id: HandoffAgentUserRequest.create_response(user_input)
                 for req in pending
             }
-            events = [
-                e async for e in workflow.run(stream=True, responses=responses)
-            ]
+            events = [e async for e in workflow.run(stream=True, responses=responses)]
             pending = _extract_pending(events)
 
         try:

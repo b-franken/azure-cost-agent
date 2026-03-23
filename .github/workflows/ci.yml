@@ -36,3 +36,6 @@ jobs:
 
       - name: Test
         run: uv run pytest tests/ -v --no-header
+
+      - name: Build Docker image
+        run: docker build --platform linux/amd64 -t azure-cost-agent:ci .
