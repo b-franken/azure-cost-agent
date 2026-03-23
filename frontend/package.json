@@ -19,5 +19,9 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "typescript": "^5"
+  },
+  "overrides": {
+    "prismjs": ">=1.30.0",
+    "langsmith": ">=0.4.6"
   }
 }
