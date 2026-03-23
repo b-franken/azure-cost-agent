@@ -1,0 +1,12 @@
+subscription_id                = "your-subscription-id"
+resource_group_name            = "rg-costag-xxxx"
+location                       = "swedencentral"
+log_analytics_resource_id      = "/subscriptions/your-sub/resourceGroups/your-rg/providers/Microsoft.OperationalInsights/workspaces/your-law"
+acr_login_server               = "yourregistry.azurecr.io"
+agent_identity_id              = "/subscriptions/your-sub/resourceGroups/your-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/your-identity"
+agent_identity_client_id       = "your-identity-client-id"
+project_endpoint               = "https://your-hub.openai.azure.com/"
+model_name                     = "gpt-4.1-mini"
+app_insights_connection_string = "InstrumentationKey=your-key;IngestionEndpoint=https://your-region.in.applicationinsights.azure.com/"
+tags                           = { environment = "poc", managed_by = "terraform" }
+container_image                = "yourregistry.azurecr.io/azure-cost-agent:latest"

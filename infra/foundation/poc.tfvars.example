@@ -1,0 +1,12 @@
+subscription_id              = "<your-subscription-id>"
+project_name                 = "costag"
+location                     = "swedencentral"
+model_name                   = "gpt-4.1-mini"
+model_version                = "2025-04-14"
+acr_sku                      = "Basic"
+enable_foundry_agent_service = false
+
+tags = {
+  environment = "poc"
+  managed_by  = "terraform"
+}

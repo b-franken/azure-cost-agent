@@ -1,0 +1,122 @@
+name: Deploy to Foundry Agent Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: "Image tag (defaults to commit SHA)"
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: ${{ vars.ACR_NAME }}
+  IMAGE_NAME: azure-cost-agent
+  PROJECT_ENDPOINT: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run pytest tests/ --no-header -q
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: |
+          TAG="${{ inputs.version_tag }}"
+          if [ -z "$TAG" ]; then TAG="${{ github.sha }}"; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push to ACR
+        run: |
+          az acr login --name $ACR_NAME
+          docker build --platform linux/amd64 \
+            -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ steps.tag.outputs.tag }} .
+          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ steps.tag.outputs.tag }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Deploy hosted agent version
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
+        run: |
+          pip install "azure-ai-projects>=2.0.0" azure-identity
+          python -c "
+          from azure.ai.projects import AIProjectClient
+          from azure.ai.projects.models import (
+              HostedAgentDefinition,
+              ProtocolVersionRecord,
+              AgentProtocol,
+          )
+          from azure.identity import DefaultAzureCredential
+          import os
+
+          project = AIProjectClient(
+              endpoint=os.environ['PROJECT_ENDPOINT'],
+              credential=DefaultAzureCredential(),
+              allow_preview=True,
+          )
+
+          image = f'{os.environ[\"ACR_NAME\"]}.azurecr.io/{os.environ[\"IMAGE_NAME\"]}:{os.environ[\"IMAGE_TAG\"]}'
+          agent = project.agents.create_version(
+              agent_name='azure-cost-agent',
+              definition=HostedAgentDefinition(
+                  container_protocol_versions=[
+                      ProtocolVersionRecord(
+                          protocol=AgentProtocol.RESPONSES, version='v1'
+                      )
+                  ],
+                  cpu='1',
+                  memory='2Gi',
+                  image=image,
+                  environment_variables={
+                      'AZURE_AI_PROJECT_ENDPOINT': os.environ['PROJECT_ENDPOINT'],
+                      'AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME': 'gpt-4.1-mini',
+                      'AZURE_SUBSCRIPTION_IDS': os.environ.get('AZURE_SUBSCRIPTION_ID', ''),
+                      'FOUNDRY_HOSTED': 'true',
+                  },
+              ),
+          )
+          print(f'Deployed: {agent.name} v{agent.version}')
+          "

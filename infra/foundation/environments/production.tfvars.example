@@ -1,0 +1,12 @@
+subscription_id              = "your-subscription-id"
+project_name                 = "costag"
+location                     = "westeurope"
+model_name                   = "gpt-4.1-mini"
+model_version                = "2025-04-14"
+enable_foundry_agent_service = false
+acr_sku                      = "Premium"
+
+tags = {
+  environment = "production"
+  managed_by  = "terraform"
+}

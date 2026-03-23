@@ -1,0 +1,33 @@
+name: azure-cost-agent
+
+description: >
+  Conversational Azure cost optimizer with 7 specialist agents.
+  Analyzes spend, detects waste, surfaces Advisor recommendations,
+  monitors budgets, detects anomalies, and audits tag hygiene.
+
+metadata:
+  authors:
+    - Bas Franken
+  tags:
+    - Azure AI AgentServer
+    - Microsoft Agent Framework
+    - FinOps
+    - Cost Optimization
+
+template:
+  name: azure-cost-agent
+  kind: hosted
+  protocols:
+    - protocol: responses
+  environment_variables:
+    - name: AZURE_OPENAI_ENDPOINT
+      value: ${AZURE_OPENAI_ENDPOINT}
+    - name: AZURE_OPENAI_CHAT_DEPLOYMENT_NAME
+      value: "{{chat}}"
+    - name: AZURE_SUBSCRIPTION_IDS
+      value: ${AZURE_SUBSCRIPTION_IDS}
+
+resources:
+  - kind: model
+    id: gpt-4.1-mini
+    name: chat

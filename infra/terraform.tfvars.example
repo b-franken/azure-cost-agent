@@ -1,0 +1,15 @@
+# Required
+subscription_id = "your-subscription-id"
+project_name    = "cchamps"    # 3-7 chars, lowercase
+
+# Optional (defaults shown)
+location                  = "westeurope"
+model_name                = "gpt-4.1"
+model_version             = "2025-04-14"
+enable_private_networking = false    # true = VNet + private endpoints
+acr_sku                   = "Basic"  # Premium required for private endpoints
+
+tags = {
+  environment = "poc"
+  managed_by  = "terraform"
+}

@@ -1,0 +1,9 @@
+[project]
+name = "Azure Cost Agent"
+
+[UI]
+name = "Azure Cost Agent"
+default_collapse_content = false
+
+[UI.theme]
+layout = "wide"
