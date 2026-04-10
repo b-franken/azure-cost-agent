@@ -7,7 +7,7 @@
     "start": "next start --port 3000"
   },
   "dependencies": {
-    "@ag-ui/client": "^0.0.48",
+    "@ag-ui/client": "^0.0.51",
     "@copilotkit/react-core": "^1.54.0",
     "@copilotkit/react-ui": "^1.54.1",
     "@copilotkit/runtime": "^1.54.1",
